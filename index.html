@@ -187,7 +187,7 @@ footer .mini .sep { width: 1px; height: 22px; background: rgba(255,255,255,.3); 
     </div>
     <div class="eyebrow">Onboarding · Consultoria tributária</div>
     <h1>Mapeamento de impactos da <span class="r">Reforma Tributária</span></h1>
-    <p class="hero-lede">Em preparação para a nossa reunião de onboarding, reunimos aqui os documentos e informações iniciais do projeto. São 12 itens, divididos em três blocos. Em cada um, você pode escrever a resposta, anexar documentos, ou fazer as duas coisas.</p>
+    <p class="hero-lede">Em preparação para a nossa reunião de onboarding, reunimos aqui os documentos e informações iniciais do projeto. São 9 itens, divididos em três blocos. Em cada um, você pode escrever a resposta, anexar documentos, ou fazer as duas coisas.</p>
     <div class="how">
       <div><b>Anexe à vontade</b>Demonstrações contábeis, contratos, notas fiscais e XMLs, em qualquer item.</div>
       <div><b>Pode pausar</b>O que você digita e anexa fica guardado neste navegador. Dá para voltar depois e continuar.</div>
@@ -256,7 +256,7 @@ footer .mini .sep { width: 1px; height: 22px; background: rgba(255,255,255,.3); 
 <div class="bar" role="region" aria-label="Progresso e envio">
   <div class="wrap">
     <div class="prog">
-      <div class="lbl"><span><b id="cnt">0</b> de 12 respondidas</span><span class="saved" id="saved"></span></div>
+      <div class="lbl"><span><b id="cnt">0</b> de 9 respondidas</span><span class="saved" id="saved"></span></div>
       <div class="track"><i id="track"></i></div>
     </div>
     <button class="btn btn-red" id="send" type="button">Enviar</button>
@@ -289,17 +289,14 @@ const SECTIONS = [
     [8, 'Notas fiscais de saída', 'Favor disponibilizar **exemplos de notas fiscais de saída (emitidas) do último mês**, preferencialmente acompanhadas dos respectivos XMLs.']
   ]},
   { n: 3, title: 'Preparação para a Reforma Tributária', qs: [
-    [9, 'Projeto interno de adequação', 'Já foi iniciado algum projeto interno de adequação às novas regras tributárias? Em caso positivo, qual o estágio atual, quais áreas estão envolvidas e quem são os responsáveis?'],
-    [10, 'Sistemas contábeis e fiscais', 'Foram adotadas medidas para atualização ou parametrização dos sistemas contábeis e fiscais (ERP, emissão de notas fiscais, escrituração)? Em caso positivo, quais sistemas e fornecedores de tecnologia estão envolvidos e quais são as principais pendências?'],
-    [11, 'Migração da contabilidade', 'Já foi realizada a migração da contabilidade? Em caso positivo, para qual sistema ou prestador, em que data e qual o estágio atual?'],
-    [12, 'Novas obrigações e rotinas', 'Foram iniciados os procedimentos de adaptação às novas obrigações e rotinas decorrentes da Reforma Tributária (ex.: novos campos de IBS/CBS nos documentos fiscais, apuração, escrituração)? Em caso positivo, quais?']
+    [9, 'Novas obrigações e rotinas', 'Foram iniciados os procedimentos de adaptação às novas obrigações e rotinas decorrentes da Reforma Tributária (ex.: novos campos de IBS/CBS nos documentos fiscais, apuração, escrituração)? Em caso positivo, quais?']
   ]}
 ];
 const QUESTIONS = SECTIONS.flatMap(s => s.qs.map(([num, short, text]) => ({ num, short, text, folder: String(num).padStart(2, '0') + ' - ' + short })));
 
 /* ---------- estado ---------- */
 const STORE_KEY = 'alocama-questionario-v1';
-const VERSAO = 1;
+const VERSAO = 2; // 2 = itens 9–11 retirados; o antigo 12 virou 9
 const state = { answers: {}, nd: {}, files: {} }; // files: { qnum: [{id, name, size, type, file, done}] }
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -460,7 +457,7 @@ async function restore() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (s) {
-      const ajusta = obj => obj || {};
+      const ajusta = obj => s.v === VERSAO ? (obj || {}) : Object.fromEntries(Object.entries(obj || {}).filter(([n]) => !['9', '10', '11'].includes(String(n))).map(([n, v]) => [String(n) === '12' ? '9' : n, v]));
       Object.assign(state.answers, ajusta(s.answers));
       Object.assign(state.nd, ajusta(s.nd));
       Object.entries(state.answers).forEach(([n, v]) => { const el = $('#a' + n); if (el) el.value = v; });
@@ -472,6 +469,11 @@ async function restore() {
   } catch (e) {}
   const recs = await idb.all();
   (recs || []).forEach(r => {
+    if (r.v !== VERSAO) {
+      if (['9', '10', '11'].includes(String(r.q))) { idb.del(r.id); return; }
+      if (String(r.q) === '12') r.q = '9';
+      r.v = VERSAO; idb.put(r);
+    }
     (state.files[r.q] = state.files[r.q] || []).push({ id: r.id, q: r.q, name: r.name, size: r.size, type: r.type, file: r.blob, done: false });
   });
   QUESTIONS.forEach(q => renderFiles(q.num));
